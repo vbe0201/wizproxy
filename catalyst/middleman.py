@@ -101,4 +101,9 @@ class MiddleMan:
                 # the whole middleman server down.
                 pass
 
+            except* ValueError as eg:
+                # We received invalid frame data and can't continue processing.
+                for e in eg.exceptions:
+                    logger.error(f"[{self.name}] Client {sid} crashed: {e}")
+
         await trio.serve_tcp(accept_tcp_client, remote.port)
