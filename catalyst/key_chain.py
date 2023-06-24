@@ -10,7 +10,7 @@ from Crypto.Signature import pkcs1_15
 
 
 def fnv_1a(data: bytes) -> int:
-    state = 0x811c9dc5
+    state = 0x811C9DC5
     for b in data:
         state ^= b
         state *= 0x01000193
@@ -39,7 +39,7 @@ class KeyChain:
             ]
 
     def hash_key_buf(self, offset: int, length: int) -> int:
-        return fnv_1a(self.key_buf[offset:offset + length])
+        return fnv_1a(self.key_buf[offset : offset + length])
 
     def sign(self, key_slot: int, data: bytes) -> bytes:
         key = self.private_keys[key_slot]

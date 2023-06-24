@@ -28,6 +28,7 @@ class MiddleMan:
 
         async def accept_tcp_client(stream: trio.SocketStream):
             outward = await trio.open_tcp_stream(*remote)
+
             logger.info(f"[{self.name}] Client {stream.socket.getsockname()} connected")
 
             try:
