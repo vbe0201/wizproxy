@@ -470,7 +470,7 @@ dev = ["black (>=19.3b0)", "pytest (>=4.6.2)"]
 name = "wizmsg"
 version = "0.1.0"
 description = ""
-category = "dev"
+category = "main"
 optional = false
 python-versions = "^3.10"
 files = []
@@ -488,4 +488,4 @@ resolved_reference = "36d151a5c86ce2cdb737938f9731a3c1cdb687f6"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "d8c6cb9abff46f204f76eb528e218dd843463ffbcb8488348cf8d85e663f9889"
+content-hash = "3854ec8c1c58a7f05584ab052381dd5f1cc163ea8c13d87856facc31cfba4437"

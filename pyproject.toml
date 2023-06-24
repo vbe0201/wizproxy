@@ -11,12 +11,12 @@ python = "^3.11"
 loguru = "^0.7.0"
 pycryptodome = "^3.18.0"
 trio = "^0.22.0"
+wizmsg = { git = "https://github.com/wizspoil/wizmsg.git" }
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
 flake8 = "^6.0.0"
 isort = "^5.12.0"
-wizmsg = { git = "https://github.com/wizspoil/wizmsg.git" }
 
 [tool.poetry.scripts]
 catalyst = "catalyst.__main__:run"
