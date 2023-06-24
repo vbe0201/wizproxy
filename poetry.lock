@@ -466,7 +466,26 @@ files = [
 [package.extras]
 dev = ["black (>=19.3b0)", "pytest (>=4.6.2)"]
 
+[[package]]
+name = "wizmsg"
+version = "0.1.0"
+description = ""
+category = "dev"
+optional = false
+python-versions = "^3.10"
+files = []
+develop = false
+
+[package.dependencies]
+loguru = "^0.7.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/wizspoil/wizmsg.git"
+reference = "HEAD"
+resolved_reference = "36d151a5c86ce2cdb737938f9731a3c1cdb687f6"
+
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "da1e1e5e55165f34636e592ad5acfaa8f1a71110fe5949e800b6644c972b5cc7"
+content-hash = "d8c6cb9abff46f204f76eb528e218dd843463ffbcb8488348cf8d85e663f9889"
