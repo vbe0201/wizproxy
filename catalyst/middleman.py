@@ -3,12 +3,15 @@ from collections import namedtuple
 import trio
 from loguru import logger
 
+from .key_chain import KeyChain
+
 SocketAddress = namedtuple("SocketAddress", ("ip", "port"))
 
 
 class MiddleMan:
-    def __init__(self, name: str):
+    def __init__(self, name: str, key_chain: KeyChain):
         self.name = name
+        self.key_chain = key_chain
 
     async def _client_task(self, stream: trio.SocketStream, peer: trio.SocketStream):
         async for packet in stream:
