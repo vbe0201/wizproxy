@@ -39,11 +39,8 @@ class MiddleMan:
                     frame = session.session_accept(frame)
 
                 # FIXME: Add DML protocols.
-                try:
-                    processed = self.processor.process_frame(frame)
-                    logger.info(f"[C -> S] {processed=}")
-                except RuntimeError:
-                    logger.info(f"[C -> S] {frame.hex(' ').upper()}")
+                processed = self.processor.process_frame(frame)
+                logger.info(f"[C -> S] {processed=}")
 
                 if encrypted:
                     frame = session.client_aes.encrypt(frame)  # type:ignore
@@ -62,12 +59,8 @@ class MiddleMan:
                 encrypted, frame = res
 
                 # FIXME: Add DML protocols.
-                try:
-                    processed = self.processor.process_frame(frame)
-                    logger.info(f"[S -> C] {processed=}")
-                except RuntimeError:
-                    processed = None
-                    logger.info(f"[S -> C] {frame.hex(' ').upper()}")
+                processed = self.processor.process_frame(frame)
+                logger.info(f"[S -> C] {processed=}")
 
                 # For Session Offer, we need to re-sign it so the client accepts it.
                 # Otherwise, re-encrypt any frame passing through if necessary.
