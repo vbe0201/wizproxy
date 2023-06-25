@@ -36,7 +36,7 @@ class MiddleMan:
         async for packet in stream:
             buffer.add_packet(packet)
 
-            if res := buffer.poll_frame(session.client_aes):
+            while res := buffer.poll_frame(session.client_aes):
                 encrypted, frame = res
 
                 # For Session Accept, we need to re-encrypt it so the server accepts it.
@@ -61,7 +61,7 @@ class MiddleMan:
         async for packet in stream:
             buffer.add_packet(packet)
 
-            if res := buffer.poll_frame(session.server_aes):
+            while res := buffer.poll_frame(session.server_aes):
                 encrypted, frame = res
 
                 processed = self.processor.process_frame(frame)
