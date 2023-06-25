@@ -82,7 +82,7 @@ class MiddleMan:
                     ip = processed.parameters["IP"]
                     port = processed.parameters["TCPPort"]
 
-                    processed.parameters["IP"] = "192.168.178.22"
+                    processed.parameters["IP"] = "127.0.0.1"
 
                     frame = self.processor.prepare_frame(processed)
                     await self.spawn_tx.send(
@@ -104,12 +104,9 @@ class MiddleMan:
                     ip = processed.parameters["IP"]
                     port = processed.parameters["TCPPort"]
 
-                    processed.parameters["IP"] = processed.parameters[
-                        "FallbackIP"
-                    ] = "192.168.178.22"
-                    processed.parameters["FallbackTCPPort"] = processed.parameters[
-                        "TCPPort"
-                    ]
+                    processed.parameters["IP"] = "127.0.0.1"
+                    processed.parameters["FallbackIP"] = "127.0.0.1"
+                    processed.parameters["FallbackTCPPort"] = port
 
                     frame = self.processor.prepare_frame(processed)
                     await self.spawn_tx.send(
