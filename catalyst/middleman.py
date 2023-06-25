@@ -3,7 +3,7 @@ from collections import namedtuple
 
 import trio
 from loguru import logger
-from wizmsg.network import Processor, controls, MessageData
+from wizmsg.network import MessageData, Processor, controls
 
 from .buffer import PacketBuffer, is_large_frame
 from .key_chain import KeyChain
@@ -86,24 +86,34 @@ class MiddleMan:
 
                     frame = self.processor.prepare_frame(processed)
                     await self.spawn_tx.send(
-                        (f"ZoneServer-{port}", SocketAddress(ip, port))
+                        (f"ZoneServer-{port}", SocketAddress(ip, port))  # type:ignore
                     )
 
-                elif isinstance(processed, MessageData) and processed.service_id == 5 and processed.name == "MSG_SERVERTRANSFER":
+                elif (
+                    isinstance(processed, MessageData)
+                    and processed.service_id == 5
+                    and processed.name == "MSG_SERVERTRANSFER"
+                ):
                     # TODO: Fill in order value once we have it.
-                    logger.warning(f"Add order for servertransfer: {processed.order_id}")
+                    logger.warning(
+                        f"Add order for servertransfer: {processed.order_id}"
+                    )
 
                     # When game requests a server transfer, it probes the client if
                     # connecting to the given server would be possible.
                     ip = processed.parameters["IP"]
                     port = processed.parameters["TCPPort"]
 
-                    processed.parameters["IP"] = processed.parameters["FallbackIP"] = "192.168.178.22"
-                    processed.parameters["FallbackTCPPort"] = processed.parameters["TCPPort"]
+                    processed.parameters["IP"] = processed.parameters[
+                        "FallbackIP"
+                    ] = "192.168.178.22"
+                    processed.parameters["FallbackTCPPort"] = processed.parameters[
+                        "TCPPort"
+                    ]
 
                     frame = self.processor.prepare_frame(processed)
                     await self.spawn_tx.send(
-                        (f"ZoneTransfer-{port}", SocketAddress(ip, port))
+                        (f"ZoneTransfer-{port}", SocketAddress(ip, port))  # type:ignore
                     )
 
                 if encrypted:
