@@ -32,8 +32,9 @@ class AesContext:
 
         data_len = len(data)
         while data_len > 0:
-            # Split data into what is part of the current chunk and remainder.
             remaining = self.chunk_size - self.encrypted
+
+            # Split data into what is part of the current chunk and remainder.
             current = data[:remaining]
             data = data[remaining:]
 
@@ -61,8 +62,9 @@ class AesContext:
 
         data_len = len(data)
         while data_len > 0:
-            # Split data into what is part of the current chunk and remainder.
             remaining = self.chunk_size - self.decrypted
+
+            # Split data into what is part of the current chunk and remainder.
             current = data[:remaining]
             data = data[remaining:]
 
