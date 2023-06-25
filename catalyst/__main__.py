@@ -22,6 +22,7 @@ async def main():
     async with trio.open_nursery() as nursery:
         proxy = Proxy(key_chain, processor, nursery)
         proxy.spawn_middleman("Login", US_LOGIN_ADDR)
+        await proxy.run()
 
 
 def run():
