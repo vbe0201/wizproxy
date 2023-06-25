@@ -15,6 +15,7 @@ US_LOGIN_ADDR = SocketAddress("login.us.wizard101.com", 12000)
 
 async def main():
     processor = Processor()
+    processor.load_protocols_from_directory(GAME_DATA / "messages")
 
     key_chain = KeyChain(GAME_DATA / "ki_keys.json", GAME_DATA / "injected_keys.json")
 
