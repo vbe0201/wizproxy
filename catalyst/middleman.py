@@ -13,11 +13,10 @@ SocketAddress = namedtuple("SocketAddress", ("ip", "port"))
 
 
 class MiddleMan:
-    def __init__(self, name: str, key_chain: KeyChain):
+    def __init__(self, name: str, key_chain: KeyChain, processor: Processor):
         self.name = name
         self.key_chain = key_chain
-
-        self.processor = Processor()
+        self.processor = processor
 
         self.id_generator = itertools.count()
 
@@ -38,7 +37,6 @@ class MiddleMan:
                 if opcode == 5:
                     frame = session.session_accept(frame)
 
-                # FIXME: Add DML protocols.
                 processed = self.processor.process_frame(frame)
                 logger.info(f"[C -> S] {processed=}")
 
@@ -58,7 +56,6 @@ class MiddleMan:
             if res := buffer.poll_frame(session.server_aes):
                 encrypted, frame = res
 
-                # FIXME: Add DML protocols.
                 processed = self.processor.process_frame(frame)
                 logger.info(f"[S -> C] {processed=}")
 
