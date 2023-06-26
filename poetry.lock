@@ -483,7 +483,7 @@ loguru = "^0.7.0"
 type = "git"
 url = "https://github.com/wizspoil/wizmsg.git"
 reference = "HEAD"
-resolved_reference = "f6817ee03922ddbd3e03368855114a563be76f80"
+resolved_reference = "e5cd628bc0b7a4058749d51d9ed049bf411ddedf"
 
 [metadata]
 lock-version = "2.0"
