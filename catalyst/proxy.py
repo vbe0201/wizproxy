@@ -13,7 +13,7 @@ class Proxy:
     each shard and can spawn more shard siblings on demand.
 
     Communication between :class:`Shard`s and the :class:`Proxy`
-    is implemented via message passing; no inner state is shared
+    is realized via message passing; no inner state is shared
     and synchronization is not required.
     """
 
