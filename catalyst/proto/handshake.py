@@ -51,6 +51,7 @@ class SignedMessage:
 class EncryptedMessage:
     """The cryptographic message portion of Session Accept."""
 
+    flags: int
     key_hash: int
     challenge_answer: int
     echo: int
@@ -60,6 +61,7 @@ class EncryptedMessage:
 
     @classmethod
     def read(cls, buf: Bytes) -> Self:
+        flags = buf.u8()
         key_hash = buf.u32()
         answer = buf.u32()
         echo = buf.u32()
@@ -67,11 +69,12 @@ class EncryptedMessage:
         key = buf.read(16)
         nonce = buf.read(16)
 
-        return cls(key_hash, answer, echo, timestamp, key, nonce)
+        return cls(flags, key_hash, answer, echo, timestamp, key, nonce)
 
     def write(self, buf: Bytes) -> int:
         written = 0
 
+        written += buf.write_u8(self.flags)
         written += buf.write_u32(self.key_hash)
         written += buf.write_u32(self.challenge_answer)
         written += buf.write_u32(self.echo)

@@ -10,6 +10,7 @@ from .shard import SocketAddress
 ROOT = Path(__file__).parent.parent
 GAME_DATA = ROOT / "game_data"
 
+DE_LOGIN_ADDR = SocketAddress("login-de.eu.wizard101.com", 12000)
 US_LOGIN_ADDR = SocketAddress("login.us.wizard101.com", 12000)
 
 
@@ -21,7 +22,7 @@ async def main():
 
     async with trio.open_nursery() as nursery:
         proxy = Proxy(key_chain, nursery)
-        proxy.spawn_shard("Login", US_LOGIN_ADDR)
+        proxy.spawn_shard("Login", DE_LOGIN_ADDR)
         await proxy.run()
 
 

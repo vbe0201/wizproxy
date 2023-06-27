@@ -78,7 +78,7 @@ class Shard:
             await peer.send_all(data)
 
     async def run(self, remote: SocketAddress):
-        logger.info(f"[{self.name}] Spawning middlemen to {remote}...")
+        logger.info(f"[{self.name}] Spawning shard to {remote}...")
 
         async def accept_tcp_client(stream: trio.SocketStream):
             outward = await trio.open_tcp_stream(*remote)
