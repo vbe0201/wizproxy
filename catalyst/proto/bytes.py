@@ -73,3 +73,28 @@ class Bytes(io.BytesIO):
 
     def write_f64(self, value: float) -> int:
         return self._write_fmt("<d", value)
+
+    def string(self) -> bytes:
+        size = self.u16()
+        return self.read(size)
+
+    def write_string(self, data: bytes) -> int:
+        written = 0
+
+        written += self.write_u16(len(data))
+        written += self.write(data)
+
+        return written
+
+    def wstr(self) -> str:
+        size = self.u16()
+        return self.read(size).decode("utf-16-le")
+
+    def write_wstr(self, data: str) -> int:
+        raw = data.encode("utf-16-le")
+        written = 0
+
+        written += self.write_u16(len(raw))
+        written += self.write(raw)
+
+        return written
