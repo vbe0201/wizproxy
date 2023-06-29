@@ -1,12 +1,12 @@
 import itertools
 from collections import namedtuple
-from struct import unpack
 
 import trio
 from loguru import logger
 
 from .key_chain import KeyChain
 from .session import Session
+from .stream import SessionStream
 
 SocketAddress = namedtuple("SocketAddress", ("ip", "port"))
 
@@ -49,16 +49,19 @@ class Shard:
         stream: trio.SocketStream,
         peer: trio.SocketStream,
     ):
-        async for data in stream:
-            magic, size = unpack("<HH", data[:4])
-            if magic == 0xF00D and data[9 if size >= 0x8000 else 5] == 5:
-                await peer.send_all(session.session_accept(data))
-                continue
+        async for res in SessionStream(stream, session, True):
+            encrypted, frame = res
 
-            dec = session.client_aes.decrypt(data)  # type:ignore
-            logger.info(f"[C -> S] {dec.hex(' ').upper()}")
+            idx = 9 if len(frame) >= 0x8004 else 5
+            if frame[idx - 1] == 1 and frame[idx] == 5:
+                frame = session.session_accept(frame)
 
-            await peer.send_all(data)
+            logger.info(f"[C -> S] {frame.hex(' ').upper()}")
+
+            if encrypted:
+                frame = session.client_aes.encrypt(frame)  # type:ignore
+
+            await peer.send_all(frame)
 
     async def _server_task(
         self,
@@ -66,16 +69,19 @@ class Shard:
         stream: trio.SocketStream,
         peer: trio.SocketStream,
     ):
-        async for data in stream:
-            magic, size = unpack("<HH", data[:4])
-            if magic == 0xF00D and data[9 if size >= 0x8000 else 5] == 0:
-                await peer.send_all(session.session_offer(data))
-                continue
+        async for res in SessionStream(stream, session, False):
+            encrypted, frame = res
 
-            dec = session.server_aes.decrypt(data)  # type:ignore
-            logger.info(f"[S -> C] {dec.hex(' ').upper()}")
+            idx = 9 if len(frame) >= 0x8004 else 5
+            if frame[idx - 1] == 1 and frame[idx] == 0:
+                frame = session.session_offer(frame)
 
-            await peer.send_all(data)
+            logger.info(f"[S -> C] {frame.hex(' ').upper()}")
+
+            if encrypted:
+                frame = session.server_aes.encrypt(frame)  # type:ignore
+
+            await peer.send_all(frame)
 
     async def run(self, remote: SocketAddress):
         logger.info(f"[{self.name}] Spawning shard to {remote}...")
