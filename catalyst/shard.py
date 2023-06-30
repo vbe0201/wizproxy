@@ -5,6 +5,7 @@ import trio
 from loguru import logger
 
 from .key_chain import KeyChain
+from .proto import Bytes, Frame
 from .session import Session
 from .stream import SessionStream
 
@@ -52,9 +53,14 @@ class Shard:
         async for res in SessionStream(stream, session, True):
             encrypted, frame = res
 
-            idx = 9 if len(frame) >= 0x8004 else 5
-            if frame[idx - 1] == 1 and frame[idx] == 5:
-                frame = session.session_accept(frame)
+            bytes = Bytes(frame)
+            frame = Frame.read(bytes)
+
+            if frame.opcode == 5:
+                frame.payload = session.session_accept(frame.payload)
+
+            frame.write(bytes)
+            frame = bytes.getvalue()
 
             logger.info(f"[C -> S] {frame.hex(' ').upper()}")
 
@@ -72,9 +78,14 @@ class Shard:
         async for res in SessionStream(stream, session, False):
             encrypted, frame = res
 
-            idx = 9 if len(frame) >= 0x8004 else 5
-            if frame[idx - 1] == 1 and frame[idx] == 0:
-                frame = session.session_offer(frame)
+            bytes = Bytes(frame)
+            frame = Frame.read(bytes)
+
+            if frame.opcode == 0:
+                frame.payload = session.session_offer(frame.payload)
+
+            frame.write(bytes)
+            frame = bytes.getvalue()
 
             logger.info(f"[S -> C] {frame.hex(' ').upper()}")
 

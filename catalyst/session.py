@@ -29,14 +29,14 @@ class Session:
         self.server_aes = None
 
     def _extract_signed_message(self, raw: bytes) -> tuple[bytes, bytes]:
-        crypto_payload_len = unpack("<I", raw[0x16:0x1A])[0]
-        crypto_payload = raw[0x1A : 0x1A + crypto_payload_len]
+        crypto_payload_len = unpack("<I", raw[0xE:0x12])[0]
+        crypto_payload = raw[0x12 : 0x12 + crypto_payload_len]
 
         return crypto_payload[:-256], crypto_payload[-256:]
 
     def _extract_encrypted_message(self, raw: bytes) -> bytes:
-        crypto_payload_len = unpack("<I", raw[0x18:0x1C])[0] - 1
-        return raw[0x1D : 0x1D + crypto_payload_len]
+        crypto_payload_len = unpack("<I", raw[0x10:0x14])[0] - 1
+        return raw[0x15 : 0x15 + crypto_payload_len]
 
     def _make_key_hash(self) -> int:
         return self.key_chain.hash_key_buf(self.fnv_off, self.fnv_len)
@@ -65,7 +65,7 @@ class Session:
         signature = self.key_chain.sign(self.key_slot, crypto_payload)
 
         # Reassemble the frame with the patched signature.
-        return raw[: 0x1A + len(crypto_payload)] + signature + b"\x00"
+        return raw[: 0x12 + len(crypto_payload)] + signature + b"\x00"
 
     def session_accept(self, raw: bytes) -> bytes:
         # Extract the encrypted payload and decrypt it.
@@ -91,4 +91,4 @@ class Session:
         crypto_payload = self.key_chain.encrypt(self.key_slot, bytes.getvalue())
 
         # Reassemble the frame with the patched payload.
-        return raw[:0x1D] + crypto_payload + b"\x00"
+        return raw[:0x15] + crypto_payload + b"\x00"

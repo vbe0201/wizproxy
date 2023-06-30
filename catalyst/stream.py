@@ -3,7 +3,7 @@ from typing import Optional, Self
 
 import trio
 
-from .aes import AesContext, NONCE_SIZE, TAG_SIZE
+from .aes import NONCE_SIZE, TAG_SIZE, AesContext
 from .session import Session
 
 
