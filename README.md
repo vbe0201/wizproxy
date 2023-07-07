@@ -51,7 +51,7 @@ You should then be left with two non-empty files `ki_keys.json` and
 
 ### Connecting to catalyst
 
-First, you need to run catalyst using `poetry run catalyst -- --keys /path/to/keys`
+First, you need to run catalyst using `poetry run catalyst -- /path/to/keys`
 where `/path/to/keys` is the directory with the two JSONs from the previous step.
 
 Then navigate to the `Bin/` directory of your Wizard101 installation (on Windows,
@@ -59,3 +59,16 @@ it's usually `C:\ProgramData\KingsIsle Entertainment\Wizard101\Bin`).
 
 Open a command line and run `.\WizardGraphicalClient.exe -L 127.0.0.1 12000` to
 connect to catalyst.
+
+### Using with EU servers
+
+`catalyst` does support the EU servers of the game just as well as the US ones.
+
+Simply follow all the above steps and then launch the proxy using the command
+`poetry run catalyst -- /path/to/keys -l <login server ip>`.
+
+You can find the login server IP in `PatchClient/BankA/PatchConfig.xml` inside
+the game's installation directory, XML key `LoginHostname`.
+
+For the German servers for example, you would use
+`poetry run catalyst -- keys -l login-de.eu.wizard101.com`.

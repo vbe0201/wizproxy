@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any
+from typing import Any, Iterable
 
 from .bytes import Bytes
 
@@ -10,6 +10,7 @@ _DML_DECODE_LOOKUP = [
     (Bytes.u16, Bytes.write_u16),
     (Bytes.i32, Bytes.write_i32),
     (Bytes.u32, Bytes.write_u32),
+    (Bytes.u64, Bytes.write_u64),
     (Bytes.string, Bytes.write_string),
     (Bytes.wstr, Bytes.write_wstr),
     (Bytes.f32, Bytes.write_f32),
@@ -25,17 +26,18 @@ class Type(IntEnum):
     USHRT = 2
     INT = 3
     UINT = 4
-    STR = 5
-    WSTR = 6
-    FLT = 7
-    DBL = 8
+    GID = 5
+    STR = 6
+    WSTR = 7
+    FLT = 8
+    DBL = 9
 
 
 @dataclass
 class Layout:
     """Describes the data layout of a DML message."""
 
-    layout: list[tuple[str, Type]]
+    layout: Iterable[tuple[str, Type]]
 
     def encode(self, msg: dict[str, Any]) -> bytes:
         buf = Bytes()

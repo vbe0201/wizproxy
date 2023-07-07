@@ -5,6 +5,7 @@ import trio
 from loguru import logger
 
 from .key_chain import KeyChain
+from .messages import MSG_CHARACTERSELECTED, MSG_SERVERTRANSFER
 from .proto import Bytes, Frame
 from .session import Session
 from .stream import SessionStream
@@ -83,6 +84,32 @@ class Shard:
 
             if frame.opcode == 0:
                 frame.payload = session.session_offer(frame.payload)
+
+            elif frame.service_id == 7 and frame.order == 3:
+                # When the Login Server admits a new client into the game, it tells
+                # it which server to connect to. Spawn a new proxy shard and
+                # instruct the client to connect to that instead.
+                msg = MSG_CHARACTERSELECTED.decode(frame.payload)
+
+                addr = SocketAddress(msg["IP"], msg["TCPPort"])
+                msg["IP"] = b"127.0.0.1"
+
+                frame.payload = MSG_CHARACTERSELECTED.encode(msg)
+
+                await self.proxy_tx.send((f"ZoneServer-{addr.port}", addr))
+
+            elif frame.service_id == 5 and frame.order == 221:
+                # On zone changes, a client may be transferred to a different server.
+                # We need to make it connect to the proxy again, with fallback being
+                # what the client is currently connected to.
+                msg = MSG_SERVERTRANSFER.decode(frame.payload)
+
+                addr = SocketAddress(msg["IP"], msg["TCPPort"])
+                msg["IP"] = msg["FallbackIP"] = b"127.0.0.1"
+
+                frame.payload = MSG_SERVERTRANSFER.encode(msg)
+
+                await self.proxy_tx.send((f"ZoneServer-{addr.port}", addr))
 
             frame.write(bytes)
             frame = bytes.getvalue()
