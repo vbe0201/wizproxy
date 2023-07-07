@@ -1,6 +1,5 @@
-import json
 from base64 import b64decode
-from pathlib import Path
+from typing import Any
 
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Hash import SHA1
@@ -19,23 +18,34 @@ def fnv_1a(data: bytes) -> int:
 
 
 class KeyChain:
-    def __init__(self, ki_keys_path: Path, injected_path: Path):
-        with open(ki_keys_path, encoding="utf-8") as f:
-            ki_keys = json.load(f)
+    """
+    Key chain for managing asymmetric keys.
 
-            self.key_buf = b64decode(ki_keys["raw"].encode())
-            self.public_keys = [
-                RSA.import_key(b64decode(key["public"].encode()))
-                for key in ki_keys["decoded"]
-            ]
+    The foundation for proxying is the exfiltration of symmetric keys
+    during the initial session handshake.
 
-        with open(injected_path, encoding="utf-8") as f:
-            injected = json.load(f)
+    This is accomplished by making the client use a control set of keys
+    to encrypt its payload, then re-encrypt it with KI's keys before
+    forwarding it to the server.
 
-            self.private_keys = [
-                RSA.import_key(b64decode(key["private"].encode()))
-                for key in injected["decoded"]
-            ]
+    Key material is obtained from ki-keyring project and the accepted
+    format is the output JSONs it produces.
+
+    :param ki_keys: KingsIsle public key material from a client.
+    :param injected_keys: Private key material to injected client keys.
+    """
+
+    def __init__(self, ki_keys: dict[str, Any], injected_keys: dict[str, Any]):
+        self.key_buf = b64decode(ki_keys["raw"].encode())
+        self.public_keys = [
+            RSA.import_key(b64decode(key["public"].encode()))
+            for key in ki_keys["decoded"]
+        ]
+
+        self.private_keys = [
+            RSA.import_key(b64decode(key["private"].encode()))
+            for key in injected_keys["decoded"]
+        ]
 
     def hash_key_buf(self, offset: int, length: int) -> int:
         return fnv_1a(self.key_buf[offset : offset + length])
@@ -45,6 +55,12 @@ class KeyChain:
         data_hash = SHA1.new(data)
 
         return pkcs1_15.new(key).sign(data_hash)
+
+    def verify(self, key_slot: int, data: bytes, signature: bytes):
+        key = self.public_keys[key_slot]
+        data_hash = SHA1.new(data)
+
+        pkcs1_15.new(key).verify(data_hash, signature)
 
     def encrypt(self, key_slot: int, data: bytes) -> bytes:
         cipher = PKCS1_OAEP.new(self.public_keys[key_slot])

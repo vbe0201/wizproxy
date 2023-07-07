@@ -11,7 +11,6 @@ python = "^3.11"
 loguru = "^0.7.0"
 pycryptodome = "^3.18.0"
 trio = "^0.22.0"
-wizmsg = { git = "https://github.com/wizspoil/wizmsg.git" }
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
