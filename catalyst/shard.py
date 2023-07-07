@@ -1,5 +1,6 @@
 import itertools
 from collections import namedtuple
+from functools import partial
 from typing import Generic, TypeVar
 
 import trio
@@ -185,8 +186,10 @@ class Shard:
                 for e in eg.exceptions:
                     logger.error(f"[{self.name}] Client {sid} crashed: {e}")
 
-        # Port 0 makes the OS pick for us. So we need to remember the real port.
-        listeners = await nursery.start(trio.serve_tcp, accept_tcp_client, 0)
+        # Port 0 makes the OS pick for us. So we need to remember the real socket
+        # address after the server has started.
+        serve_tcp = partial(trio.serve_tcp, handler_nursery=nursery)
+        listeners = await nursery.start(serve_tcp, accept_tcp_client, 0)
         self.addr = SocketAddress(*listeners[0].socket.getsockname())  # type:ignore
 
         return self.addr
