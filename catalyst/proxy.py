@@ -21,24 +21,28 @@ class Proxy:
         self.key_chain = key_chain
         self.nursery = nursery
 
-        self.shards = {}
+        self._shards = {}
 
         tx, rx = trio.open_memory_channel(32)
         self.sender = tx
         self.receiver = rx
 
-    def spawn_shard(self, name: str, addr: SocketAddress):
+    async def spawn_shard(self, addr: SocketAddress) -> SocketAddress:
         # If the shard is already running, ignore it.
-        if name in self.shards:
-            return
+        if local := self._shards.get(addr):
+            return local
 
-        tx, rx = trio.open_memory_channel(4)
-        shard = Shard(name, self.key_chain, self.sender, rx)
+        name = f"{addr.ip}:{addr.port}"
+        shard = Shard(name, self.key_chain, self.sender.clone())
 
-        self.shards[name] = tx
-        self.nursery.start_soon(shard.run, addr)
+        await shard.run(self.nursery, addr)
+        local = self._shards[addr] = shard.addr
+
+        return local
 
     async def run(self):
         while True:
-            name, addr = await self.receiver.receive()
-            self.spawn_shard(name, addr)
+            parcel = await self.receiver.receive()
+
+            addr = await self.spawn_shard(parcel.data)
+            parcel.answer(addr)

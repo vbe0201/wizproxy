@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 import trio
+from loguru import logger
 
 from .key_chain import KeyChain
 from .proxy import Proxy
@@ -17,7 +18,10 @@ async def main(args):
 
     async with trio.open_nursery() as nursery:
         proxy = Proxy(key_chain, nursery)
-        proxy.spawn_shard("Login", SocketAddress(args.login, args.port))
+
+        addr = await proxy.spawn_shard(SocketAddress(args.login, args.port))
+        logger.info(f"Proxy listening on {addr.ip}:{addr.port}")
+
         await proxy.run()
 
 

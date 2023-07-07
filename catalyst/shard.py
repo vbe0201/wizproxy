@@ -1,5 +1,6 @@
 import itertools
 from collections import namedtuple
+from typing import Generic, TypeVar
 
 import trio
 from loguru import logger
@@ -10,7 +11,32 @@ from .proto import Bytes, Frame
 from .session import Session
 from .stream import SessionStream
 
+Request = TypeVar("Request")
+Response = TypeVar("Response")
+
 SocketAddress = namedtuple("SocketAddress", ("ip", "port"))
+
+_DUMMY_ADDR = SocketAddress("0.0.0.0", 0)
+
+
+class Parcel(Generic[Request, Response]):
+    """
+    A parcel for request-response communication between a
+    :class:`Shard` and the proxy.
+    """
+
+    def __init__(self, data: Request):
+        self.data = data
+
+        tx, rx = trio.open_memory_channel(1)
+        self.sender = tx
+        self.receiver = rx
+
+    async def wait(self) -> Response:
+        return await self.receiver.receive()
+
+    def answer(self, response: Response):
+        self.sender.send_nowait(response)
 
 
 class Shard:
@@ -28,20 +54,19 @@ class Shard:
     :param name: The human-readable name of the shard.
     :param key_chain: The :class:`KeyChain` for asymmetric crypto.
     :param proxy_tx: The channel for sending commands to the supervisor.
-    :param command_rx: The channel for receiving commands from the outside.
     """
 
     def __init__(
         self,
         name: str,
         key_chain: KeyChain,
-        proxy_tx: trio.abc.SendChannel[tuple[str, SocketAddress]],
-        command_rx: trio.abc.ReceiveChannel[tuple[int, bytes]],
+        proxy_tx: trio.abc.SendChannel[Parcel[SocketAddress, SocketAddress]],
     ):
         self.name = name
         self.key_chain = key_chain
         self.proxy_tx = proxy_tx
-        self.command_rx = command_rx
+
+        self.addr = _DUMMY_ADDR
 
         self._id_generator = itertools.count()
 
@@ -91,12 +116,16 @@ class Shard:
                 # instruct the client to connect to that instead.
                 msg = MSG_CHARACTERSELECTED.decode(frame.payload)
 
-                addr = SocketAddress(msg["IP"], msg["TCPPort"])
-                msg["IP"] = b"127.0.0.1"
+                # Instruct the proxy to spawn the server and await the
+                # local socket address of the newly spawned shard.
+                parcel = Parcel(SocketAddress(msg["IP"], msg["TCPPort"]))
+                await self.proxy_tx.send(parcel)
+                shard = await parcel.wait()
 
+                # Fix up the client packet to make it connect to shard.
+                msg["IP"] = shard.ip.encode()
+                msg["TCPPort"] = shard.port
                 frame.payload = MSG_CHARACTERSELECTED.encode(msg)
-
-                await self.proxy_tx.send((f"ZoneServer-{addr.port}", addr))
 
             elif frame.service_id == 5 and frame.order == 221:
                 # On zone changes, a client may be transferred to a different server.
@@ -104,12 +133,19 @@ class Shard:
                 # what the client is currently connected to.
                 msg = MSG_SERVERTRANSFER.decode(frame.payload)
 
-                addr = SocketAddress(msg["IP"], msg["TCPPort"])
-                msg["IP"] = msg["FallbackIP"] = b"127.0.0.1"
+                # Instruct the proxy to spawn the server and await the
+                # local socket address of the newly spawned shard.
+                parcel = Parcel(SocketAddress(msg["IP"], msg["TCPPort"]))
+                await self.proxy_tx.send(parcel)
+                shard = await parcel.wait()
 
+                # Fix up the client packet to make it connect to shard.
+                # Use this shard's socket as a fallback.
+                msg["IP"] = shard.ip.encode()
+                msg["TCPPort"] = shard.port
+                msg["FallbackIP"] = self.addr.ip.encode()
+                msg["FallbackTCPPort"] = self.addr.port
                 frame.payload = MSG_SERVERTRANSFER.encode(msg)
-
-                await self.proxy_tx.send((f"ZoneServer-{addr.port}", addr))
 
             frame.write(bytes)
             frame = bytes.getvalue()
@@ -121,7 +157,7 @@ class Shard:
 
             await peer.send_all(frame)
 
-    async def run(self, remote: SocketAddress):
+    async def run(self, nursery: trio.Nursery, remote: SocketAddress) -> SocketAddress:
         logger.info(f"[{self.name}] Spawning shard to {remote}...")
 
         async def accept_tcp_client(stream: trio.SocketStream):
@@ -149,4 +185,8 @@ class Shard:
                 for e in eg.exceptions:
                     logger.error(f"[{self.name}] Client {sid} crashed: {e}")
 
-        await trio.serve_tcp(accept_tcp_client, remote.port)
+        # Port 0 makes the OS pick for us. So we need to remember the real port.
+        listeners = await nursery.start(trio.serve_tcp, accept_tcp_client, 0)
+        self.addr = SocketAddress(*listeners[0].socket.getsockname())  # type:ignore
+
+        return self.addr
