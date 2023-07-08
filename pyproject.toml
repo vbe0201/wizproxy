@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "catalyst"
+name = "wizproxy"
 version = "0.1.0"
 description = "A proxy for handling encrypted Wizard101 traffic"
 authors = ["Valentin B. <valentin.be@protonmail.com>"]
@@ -19,7 +19,7 @@ flake8 = "^6.0.0"
 isort = "^5.12.0"
 
 [tool.poetry.scripts]
-catalyst = "catalyst.__main__:run"
+wizproxy = "wizproxy.__main__:run"
 
 [build-system]
 requires = ["poetry-core"]
