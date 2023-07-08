@@ -1,3 +1,5 @@
+from typing import Optional
+
 import trio
 
 from .key_chain import KeyChain
@@ -16,9 +18,14 @@ class Proxy:
     Communication between :class:`Shard`s and the :class:`Proxy`
     is realized via message passing; no inner state is shared
     and synchronization is not required.
+
+    :param host: The host interface to bind shards to.
+    :param key_chain: The key chain to use for cryptographic operations.
+    :param nursery: The nursery to spawn shards on.
     """
 
-    def __init__(self, key_chain: KeyChain, nursery: trio.Nursery):
+    def __init__(self, host: Optional[str], key_chain: KeyChain, nursery: trio.Nursery):
+        self.host = host
         self.key_chain = key_chain
         self.nursery = nursery
 
@@ -41,7 +48,7 @@ class Proxy:
 
         shard = Shard(self.plugins, self.key_chain, self.sender.clone())
 
-        self._shards[addr] = await shard.run(self.nursery, addr)
+        self._shards[addr] = await shard.run(self.host, self.nursery, addr)
         return shard.addr
 
     async def run(self):

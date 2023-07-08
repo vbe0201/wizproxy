@@ -16,7 +16,7 @@ async def main(args):
     )
 
     async with trio.open_nursery() as nursery:
-        proxy = Proxy(key_chain, nursery)
+        proxy = Proxy(args.host, key_chain, nursery)
         await proxy.spawn_shard(SocketAddress(args.login, args.port))
         await proxy.run()
 
@@ -25,6 +25,11 @@ def run():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "keys", type=Path, help="The directory with the two key JSON files"
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        help="The host interface to bind shard sockets to",
     )
     parser.add_argument(
         "-l",

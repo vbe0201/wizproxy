@@ -1,6 +1,6 @@
 import itertools
 from functools import partial
-from typing import Generic, TypeVar
+from typing import Generic, Optional, TypeVar
 
 import trio
 from loguru import logger
@@ -115,7 +115,9 @@ class Shard:
 
             await peer.send_all(frame)
 
-    async def run(self, nursery: trio.Nursery, remote: SocketAddress) -> SocketAddress:
+    async def run(
+        self, host: Optional[str], nursery: trio.Nursery, remote: SocketAddress
+    ) -> SocketAddress:
         async def accept_tcp_client(stream: trio.SocketStream):
             outward = await trio.open_tcp_stream(*remote)
 
@@ -147,7 +149,7 @@ class Shard:
 
         # Port 0 makes the OS pick for us. So we need to remember the real socket
         # address after the server has started.
-        serve_tcp = partial(trio.serve_tcp, handler_nursery=nursery)
+        serve_tcp = partial(trio.serve_tcp, host=host, handler_nursery=nursery)
         listeners = await nursery.start(serve_tcp, accept_tcp_client, 0)
         self.addr = SocketAddress(*listeners[0].socket.getsockname())  # type:ignore
 
