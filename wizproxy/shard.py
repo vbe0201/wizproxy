@@ -121,7 +121,7 @@ class Shard:
         async def accept_tcp_client(stream: trio.SocketStream):
             outward = await trio.open_tcp_stream(*remote)
 
-            client = SocketAddress(*stream.socket.getsockname())  # type:ignore
+            client = SocketAddress(*stream.socket.getsockname()[:2])  # type:ignore
             sid = next(self._id_generator)
             session = Session(client, remote, sid, self.key_chain)
 
@@ -151,7 +151,7 @@ class Shard:
         # address after the server has started.
         serve_tcp = partial(trio.serve_tcp, host=host, handler_nursery=nursery)
         listeners = await nursery.start(serve_tcp, accept_tcp_client, 0)
-        self.addr = SocketAddress(*listeners[0].socket.getsockname())  # type:ignore
+        self.addr = SocketAddress(*listeners[0].socket.getsockname()[:2])  # type:ignore
 
         logger.info(f"[{self.socket()}] Spawning shard to {remote}...")
 
