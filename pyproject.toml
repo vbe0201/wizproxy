@@ -10,6 +10,7 @@ readme = "README.md"
 python = "^3.11"
 loguru = "^0.7.0"
 pycryptodome = "^3.18.0"
+scapy = "^2.5.0"
 trio = "^0.22.0"
 
 [tool.poetry.group.dev.dependencies]

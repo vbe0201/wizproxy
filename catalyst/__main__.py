@@ -3,8 +3,10 @@ import json
 from pathlib import Path
 
 import trio
+from loguru import logger
 
 from .key_chain import KeyChain
+from .plugin import ScapyPlugin
 from .proto import SocketAddress
 from .proxy import Proxy
 
@@ -17,8 +19,23 @@ async def main(args):
 
     async with trio.open_nursery() as nursery:
         proxy = Proxy(args.host, key_chain, nursery)
+
+        # If requested, enable the scapy plugin.
+        if args.capture:
+            scapy = ScapyPlugin.from_file(args.capture)
+
+            logger.info(f"Capturing packets to {args.capture.resolve()}")
+            proxy.add_plugin(scapy)
+        else:
+            scapy = None
+
         await proxy.spawn_shard(SocketAddress(args.login, args.port))
-        await proxy.run()
+
+        try:
+            await proxy.run()
+        finally:
+            if scapy is not None:
+                scapy.writer.close()
 
 
 def run():
@@ -44,6 +61,12 @@ def run():
         type=int,
         default=12000,
         help="The TCP port to spawn the Login Server on",
+    )
+    parser.add_argument(
+        "-c",
+        "--capture",
+        type=Path,
+        help="Path to the pcapng file to write captures to",
     )
 
     trio.run(main, parser.parse_args())

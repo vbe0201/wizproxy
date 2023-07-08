@@ -152,3 +152,6 @@ Thumbs.db
 /.vs/
 /.vscode/
 /.idea/
+
+# Wireshark captures
+*.pcapng
