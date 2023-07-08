@@ -6,7 +6,7 @@ import trio
 from loguru import logger
 
 from .key_chain import KeyChain
-from .plugin import ScapyPlugin
+from .plugin import ScapyPlugin, VerboseLog
 from .proto import SocketAddress
 from .proxy import Proxy
 
@@ -28,6 +28,10 @@ async def main(args):
             proxy.add_plugin(scapy)
         else:
             scapy = None
+
+        # If requested, enable verbose packet logging.
+        if args.verbose:
+            proxy.add_plugin(VerboseLog())
 
         await proxy.spawn_shard(SocketAddress(args.login, args.port))
 
@@ -67,6 +71,9 @@ def run():
         "--capture",
         type=Path,
         help="Path to the pcapng file to write captures to",
+    )
+    parser.add_argument(
+        "-v", "--verbose", help="Enables verbose logging", action="store_true"
     )
 
     trio.run(main, parser.parse_args())
