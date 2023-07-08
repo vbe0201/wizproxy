@@ -35,10 +35,8 @@ class Proxy:
         name = f"{addr.ip}:{addr.port}"
         shard = Shard(name, self.key_chain, self.sender.clone())
 
-        await shard.run(self.nursery, addr)
-        local = self._shards[addr] = shard.addr
-
-        return local
+        self._shards[addr] = await shard.run(self.nursery, addr)
+        return shard.addr
 
     async def run(self):
         while True:

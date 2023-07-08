@@ -1,4 +1,5 @@
 from struct import unpack
+from typing import Optional
 
 from .aes import AesContext
 from .key_chain import KeyChain
@@ -28,14 +29,19 @@ class Session:
         self.client_aes = None
         self.server_aes = None
 
-    def _extract_signed_message(self, raw: bytes) -> tuple[bytes, bytes]:
+    def _extract_signed_message(self, raw: bytes) -> Optional[tuple[bytes, bytes]]:
         crypto_payload_len = unpack("<I", raw[0xE:0x12])[0]
-        crypto_payload = raw[0x12 : 0x12 + crypto_payload_len]
+        if crypto_payload_len == 1:
+            return None
 
+        crypto_payload = raw[0x12 : 0x12 + crypto_payload_len]
         return crypto_payload[:-256], crypto_payload[-256:]
 
-    def _extract_encrypted_message(self, raw: bytes) -> bytes:
+    def _extract_encrypted_message(self, raw: bytes) -> Optional[bytes]:
         crypto_payload_len = unpack("<I", raw[0x10:0x14])[0] - 1
+        if crypto_payload_len == 1:
+            return None
+
         return raw[0x15 : 0x15 + crypto_payload_len]
 
     def _make_key_hash(self) -> int:
@@ -43,7 +49,10 @@ class Session:
 
     def session_offer(self, raw: bytes) -> bytes:
         # Extract the signed crypto payload.
-        crypto_payload, signature = self._extract_signed_message(raw)
+        if res := self._extract_signed_message(raw):
+            crypto_payload, signature = res
+        else:
+            return raw
 
         # Deserialize the message data.
         bytes = Bytes(crypto_payload)
@@ -69,8 +78,12 @@ class Session:
 
     def session_accept(self, raw: bytes) -> bytes:
         # Extract the encrypted payload and decrypt it.
-        crypto_payload = self._extract_encrypted_message(raw)
-        crypto_payload = self.key_chain.decrypt(self.key_slot, crypto_payload)
+        if crypto_payload := self._extract_encrypted_message(raw):
+            crypto_payload = self.key_chain.decrypt(self.key_slot, crypto_payload)
+        else:
+            self.client_aes = None
+            self.server_aes = None
+            return raw
 
         # Deserialize the message data.
         bytes = Bytes(crypto_payload)
