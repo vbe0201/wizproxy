@@ -2,7 +2,7 @@ from typing import Callable, Optional
 
 import trio
 
-from ..proto import Frame
+from ..proto import Frame, SocketAddress
 from ..session import Session
 from .filter import Direction, _make_filter
 
@@ -30,6 +30,38 @@ def listen(
         return func
 
     return decorator
+
+
+class Context:
+    """
+    Processing context for a proxy plugin.
+
+    A context stores important metadata and session state, making it
+    accessible for use by proxy plugins.
+    """
+
+    def __init__(self, shard, session: Session):
+        self._shard = shard
+        self.session = session
+
+    def shard(self) -> SocketAddress:
+        """Gets the local address of the current shard."""
+
+        return self._shard.addr
+
+    async def spawn_shard(self, addr: SocketAddress) -> SocketAddress:
+        """
+        Spawns a new shard onto the proxy.
+
+        :param addr: The remote server the new shard should proxy.
+        :return: The local address of the spawned shard.
+        """
+
+        from ..shard import Parcel
+
+        parcel = Parcel(addr)
+        await self._shard.proxy_tx.send(parcel)
+        return await parcel.wait()
 
 
 class PluginMeta(type):
@@ -73,12 +105,12 @@ class Plugin(metaclass=PluginMeta):
     def __init__(self):
         self._lock = trio.Lock()
 
-    async def _dispatch(self, dir: Direction, session: Session, frame: Frame):
+    async def _dispatch(self, dir: Direction, ctx: Context, frame: Frame):
         for listener in self.__proxy_listeners__:  # type:ignore
             filter = getattr(listener, "__proxy_filter__")
             if dir == filter.direction and filter.can_dispatch(frame):
                 async with self._lock:
-                    await listener(self, session, frame)
+                    await listener(self, ctx, frame)
 
 
 class PluginCollection:
@@ -95,6 +127,6 @@ class PluginCollection:
     def add(self, plugin: Plugin):
         self.plugins.append(plugin)
 
-    async def dispatch(self, dir: Direction, session: Session, frame: Frame):
+    async def dispatch(self, dir: Direction, ctx: Context, frame: Frame):
         for plugin in self.plugins:
-            await plugin._dispatch(dir, session, frame)
+            await plugin._dispatch(dir, ctx, frame)

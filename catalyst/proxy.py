@@ -1,7 +1,7 @@
 import trio
 
 from .key_chain import KeyChain
-from .plugin import Plugin, PluginCollection
+from .plugin import Plugin, PluginCollection, builtin
 from .shard import Shard, SocketAddress
 
 
@@ -23,6 +23,8 @@ class Proxy:
         self.nursery = nursery
 
         self.plugins = PluginCollection()
+        self.plugins.add(builtin.Builtin())
+
         self._shards = {}
 
         tx, rx = trio.open_memory_channel(32)
