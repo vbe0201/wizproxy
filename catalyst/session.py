@@ -3,21 +3,31 @@ from typing import Optional
 
 from .aes import AesContext
 from .key_chain import KeyChain
-from .proto import Bytes, EncryptedMessage, SignedMessage
+from .proto import Bytes, EncryptedMessage, SignedMessage, SocketAddress
 
 
 class Session:
     """
-    A client session to a proxy middleman.
+    A session between client and server, managed by a shard.
 
     A session stores cryptographic state for the connection and
     attributes a unique ID to each client to tell them apart.
 
+    :param client: The socket address of the connected client.
+    :param server: The socket address of the connected server.
     :param sid: The session ID of the client. Never changes.
     :param key_chain: The :class:`KeyChain` for asymmetric crypto.
     """
 
-    def __init__(self, sid: int, key_chain: KeyChain):
+    def __init__(
+        self,
+        client: SocketAddress,
+        server: SocketAddress,
+        sid: int,
+        key_chain: KeyChain,
+    ):
+        self.client = client
+        self.server = server
         self.sid = sid
         self.key_chain = key_chain
 

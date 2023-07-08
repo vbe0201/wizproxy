@@ -1,5 +1,4 @@
 import itertools
-from collections import namedtuple
 from functools import partial
 from typing import Generic, TypeVar
 
@@ -8,14 +7,13 @@ from loguru import logger
 
 from .key_chain import KeyChain
 from .messages import MSG_CHARACTERSELECTED, MSG_SERVERTRANSFER
-from .proto import Bytes, Frame
+from .plugin import Direction, PluginCollection
+from .proto import Bytes, Frame, SocketAddress
 from .session import Session
 from .stream import SessionStream
 
 Request = TypeVar("Request")
 Response = TypeVar("Response")
-
-SocketAddress = namedtuple("SocketAddress", ("ip", "port"))
 
 _DUMMY_ADDR = SocketAddress("0.0.0.0", 0)
 
@@ -52,24 +50,27 @@ class Shard:
     each shard. Shard actors talk to the proxy to spawn more siblings,
     as required during the processing of network packets.
 
-    :param name: The human-readable name of the shard.
+    :param plugins: The globally registered proxy plugins.
     :param key_chain: The :class:`KeyChain` for asymmetric crypto.
     :param proxy_tx: The channel for sending commands to the supervisor.
     """
 
     def __init__(
         self,
-        name: str,
+        plugins: PluginCollection,
         key_chain: KeyChain,
         proxy_tx: trio.abc.SendChannel[Parcel[SocketAddress, SocketAddress]],
     ):
-        self.name = name
+        self.plugins = plugins
         self.key_chain = key_chain
         self.proxy_tx = proxy_tx
 
         self.addr = _DUMMY_ADDR
 
         self._id_generator = itertools.count()
+
+    def socket(self) -> str:
+        return f"{self.addr.ip}:{self.addr.port}"
 
     async def _client_task(
         self,
@@ -86,10 +87,10 @@ class Shard:
             if frame.opcode == 5:
                 frame.payload = session.session_accept(frame.payload)
 
+            await self.plugins.dispatch(Direction.CLIENT_TO_SERVER, session, frame)
+
             frame.write(bytes)
             frame = bytes.getvalue()
-
-            logger.info(f"[C -> S] {frame.hex(' ').upper()}")
 
             if encrypted:
                 frame = session.client_aes.encrypt(frame)  # type:ignore
@@ -148,10 +149,10 @@ class Shard:
                 msg["FallbackTCPPort"] = self.addr.port
                 frame.payload = MSG_SERVERTRANSFER.encode(msg)
 
+            await self.plugins.dispatch(Direction.SERVER_TO_CLIENT, session, frame)
+
             frame.write(bytes)
             frame = bytes.getvalue()
-
-            logger.info(f"[S -> C] {frame.hex(' ').upper()}")
 
             if encrypted:
                 frame = session.server_aes.encrypt(frame)  # type:ignore
@@ -159,16 +160,16 @@ class Shard:
             await peer.send_all(frame)
 
     async def run(self, nursery: trio.Nursery, remote: SocketAddress) -> SocketAddress:
-        logger.info(f"[{self.name}] Spawning shard to {remote}...")
-
         async def accept_tcp_client(stream: trio.SocketStream):
             outward = await trio.open_tcp_stream(*remote)
 
+            client = SocketAddress(*stream.socket.getsockname())  # type:ignore
             sid = next(self._id_generator)
-            session = Session(sid, self.key_chain)
+            session = Session(client, remote, sid, self.key_chain)
 
-            socket_name = stream.socket.getsockname()  # type:ignore
-            logger.info(f"[{self.name}] Client {sid} ({socket_name}) connected")
+            logger.info(
+                f"[{self.socket()}] Client {sid} ({client.ip}:{client.port}) connected"
+            )
 
             try:
                 async with trio.open_nursery() as nursery:
@@ -184,12 +185,14 @@ class Shard:
             except* ValueError as eg:
                 # We received invalid data and can't continue processing.
                 for e in eg.exceptions:
-                    logger.error(f"[{self.name}] Client {sid} crashed: {e}")
+                    logger.error(f"[{self.socket()}] Client {sid} crashed: {e}")
 
         # Port 0 makes the OS pick for us. So we need to remember the real socket
         # address after the server has started.
         serve_tcp = partial(trio.serve_tcp, handler_nursery=nursery)
         listeners = await nursery.start(serve_tcp, accept_tcp_client, 0)
         self.addr = SocketAddress(*listeners[0].socket.getsockname())  # type:ignore
+
+        logger.info(f"[{self.socket()}] Spawning shard to {remote}...")
 
         return self.addr

@@ -1,6 +1,7 @@
 import trio
 
 from .key_chain import KeyChain
+from .plugin import Plugin, PluginCollection
 from .shard import Shard, SocketAddress
 
 
@@ -21,19 +22,22 @@ class Proxy:
         self.key_chain = key_chain
         self.nursery = nursery
 
+        self.plugins = PluginCollection()
         self._shards = {}
 
         tx, rx = trio.open_memory_channel(32)
         self.sender = tx
         self.receiver = rx
 
+    def add_plugin(self, plugin: Plugin):
+        self.plugins.add(plugin)
+
     async def spawn_shard(self, addr: SocketAddress) -> SocketAddress:
         # If the shard is already running, ignore it.
         if local := self._shards.get(addr):
             return local
 
-        name = f"{addr.ip}:{addr.port}"
-        shard = Shard(name, self.key_chain, self.sender.clone())
+        shard = Shard(self.plugins, self.key_chain, self.sender.clone())
 
         self._shards[addr] = await shard.run(self.nursery, addr)
         return shard.addr
