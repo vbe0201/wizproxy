@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from pathlib import Path
 
 # Silence overly verbose scapy logging except for errors.
@@ -30,6 +31,10 @@ class ScapyPlugin(Plugin):
 
     @classmethod
     def from_file(cls, path: Path):
+        if path.is_dir():
+            now = datetime.now()
+            path = path / now.strftime("wizproxy_%Y-%m-%d_%H-%M-%S.pcapng")
+
         writer = PcapNgWriter(str(path.resolve()))
         return cls(writer)
 
@@ -44,7 +49,9 @@ class ScapyPlugin(Plugin):
             / TCP(sport=source.port, dport=dest.port)
             / raw
         )
-        packet.comment = f"Shard {shard.ip}:{shard.port}, client {ctx.session.sid}"
+        packet.comment = (
+            f"Shard {shard.ip}:{shard.port}, client {ctx.session.sid}".encode()
+        )
 
         await trio.to_thread.run_sync(self.writer.write, packet)
 
