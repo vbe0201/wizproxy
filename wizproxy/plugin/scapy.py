@@ -1,7 +1,11 @@
+import logging
 from pathlib import Path
 
+# Silence overly verbose scapy logging except for errors.
+logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
+
 import trio
-from scapy.layers.inet import Ether, IP, TCP
+from scapy.layers.inet import IP, TCP, Ether
 from scapy.utils import PcapNgWriter
 
 from ..proto import Bytes, Frame, SocketAddress
