@@ -1,5 +1,7 @@
 import argparse
 import json
+import platform
+import socket
 from pathlib import Path
 
 import trio
@@ -16,6 +18,16 @@ async def main(args):
         json.loads((args.keys / "ki_keys.json").read_text()),
         json.loads((args.keys / "injected_keys.json").read_text()),
     )
+
+    if args.host is None and platform.system() == "Windows":
+        # Windows default wildcard interface behaves funky and
+        # "0.0.0.0" causes troubles when the game client attempts
+        # to connect to the proxy.
+        #
+        # This is not an issue under Wine (Linux and macOS), so
+        # we want to use the proper local interface as a default
+        # on Windows.
+        args.host = socket.gethostbyname(socket.gethostname())
 
     async with trio.open_nursery() as nursery:
         proxy = Proxy(args.host, key_chain, nursery)
@@ -50,7 +62,6 @@ def run():
     parser.add_argument(
         "--host",
         type=str,
-        default="0.0.0.0",
         help="The host interface to bind shard sockets to",
     )
     parser.add_argument(
