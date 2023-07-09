@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wizproxy"
-version = "0.2.0"
+version = "0.3.0"
 description = "A proxy for handling encrypted Wizard101 traffic"
 authors = ["Valentin B. <valentin.be@protonmail.com>"]
 license = "ISC"
