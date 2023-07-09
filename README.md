@@ -112,3 +112,8 @@ get your account banned.
 
 Interception and manipulating the contents of specific packet types, however,
 is supported and is the encouraged way of interacting with the packet stream.
+
+> I'm getting `json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)`
+
+This is because you are on Windows and the JSON files you dumped are UTF-16
+encoded. Use any text editor of your preference to convert them to UTF-8.
