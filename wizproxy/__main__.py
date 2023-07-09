@@ -50,6 +50,7 @@ def run():
     parser.add_argument(
         "--host",
         type=str,
+        default="0.0.0.0",
         help="The host interface to bind shard sockets to",
     )
     parser.add_argument(
