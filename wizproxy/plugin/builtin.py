@@ -65,8 +65,13 @@ class Builtin(Plugin):
     async def redirect_character_selected(self, ctx: Context, frame: Frame):
         msg = MSG_CHARACTERSELECTED.decode(frame.payload)
 
+        # Extract the server that should be proxied and check validity.
+        socket = SocketAddress(msg["IP"], msg["TCPPort"])
+        if not socket.ip and not socket.port:
+            return
+
         # Spawn a new shard to proxy the new server connection.
-        local = await ctx.spawn_shard(SocketAddress(msg["IP"], msg["TCPPort"]))
+        local = await ctx.spawn_shard(socket)
 
         # Fix up the client packet to make it connect to the shard.
         msg["IP"] = local.ip.encode()
