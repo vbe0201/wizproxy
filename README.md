@@ -3,6 +3,12 @@
 A packet proxy for exfiltrating and manipulating encrypted Wizard101
 network traffic.
 
+## Disclaimer
+
+**Using this software bears a risk of getting your account banned. At the time of writing, it works with EU servers but that may change in the future.**
+
+When in doubt, always use a burner account first to fish for a ban.
+
 ## How it works
 
 wizproxy sits between a client and a server, receiving and forwarding
@@ -101,6 +107,8 @@ post-processing these captures.
 This means your client is out of date. Open the patch client and let it run
 to completion, then follow the above setup steps again to inject a custom
 key ring into the updated binary.
+
+If that still doesn't resolve it, the client version is unsupported.
 
 > Is injection supported?
 

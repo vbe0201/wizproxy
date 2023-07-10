@@ -21,7 +21,7 @@ async def main(args):
 
     if args.host is None and platform.system() == "Windows":
         # Windows default wildcard interface behaves funky and
-        # "0.0.0.0" causes troubles when the game client attempts
+        # "0.0.0.0" causes trouble when the game client attempts
         # to connect to the proxy.
         #
         # This is not an issue under Wine (Linux and macOS), so
