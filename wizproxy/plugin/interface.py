@@ -2,9 +2,11 @@ from typing import Callable, Optional
 
 import trio
 
-from ..proto import Frame, SocketAddress
-from ..session import Session
-from .filter import Direction, _make_filter
+from wizproxy.core.parcel import Parcel
+from wizproxy.proto import Frame, SocketAddress
+from wizproxy.session import Session
+
+from ._filter import Direction, Filter
 
 
 def listen(
@@ -12,20 +14,29 @@ def listen(
     *,
     opcode: Optional[int] = None,
     service_id: Optional[int] = None,
-    order: Optional[int] = None
+    order: Optional[int] = None,
+    dirty: bool = True,
 ):
     """
     Defines a new packet listener inside a proxy plugin.
 
-    Listeners are coroutines accepting `self, session, frame` as
-    its arguments.
+    Listeners are coroutines accepting `self, context, frame` as
+    their arguments.
 
-    They do not return anything and can be used to manipulate and
-    introspect the frame data.
+    They may optionally return a bool indicating whether a frame
+    should be omitted in the forwarding of the traffic.
+
+    When a frame wanders through a listener, it is marked dirty
+    and must be re-serialized to account for eventual changes
+    done by the handler.
+
+    Write filters which are conservative in what they accept to
+    keep the number of needed re-serializations low.
     """
 
     def decorator(func):
-        func.__proxy_filter__ = _make_filter(dir, opcode, service_id, order)
+        func.__proxy_filter__ = Filter(dir, opcode, service_id, order)
+        func.__proxy_dirty__ = dirty
         func.__proxy_listener__ = True
         return func
 
@@ -36,30 +47,25 @@ class Context:
     """
     Processing context for a proxy plugin.
 
-    A context stores important metadata and session state, making it
-    accessible for use by proxy plugins.
+    Contexts provide introspection into state and metadata of the
+    connection a frame is coming from.
     """
 
     def __init__(self, shard, session: Session):
         self._shard = shard
         self.session = session
 
-    def shard(self) -> SocketAddress:
-        """Gets the local address of the current shard."""
+    @property
+    def shard_addr(self) -> SocketAddress:
+        return self._shard.self_addr
 
-        return self._shard.addr
+    @property
+    def remote_addr(self) -> SocketAddress:
+        return self._shard.remote_addr
 
     async def spawn_shard(self, addr: SocketAddress) -> SocketAddress:
-        """
-        Spawns a new shard onto the proxy.
-
-        :param addr: The remote server the new shard should proxy.
-        :return: The local address of the spawned shard.
-        """
-
-        from ..shard import Parcel
-
         parcel = Parcel(addr)
+
         await self._shard.proxy_tx.send(parcel)
         return await parcel.wait()
 
@@ -84,7 +90,6 @@ class PluginMeta(type):
                     listeners.append(value)
 
         new_cls.__proxy_listeners__ = listeners
-
         return new_cls
 
 
@@ -92,11 +97,11 @@ class Plugin(metaclass=PluginMeta):
     """
     Base class for plugins which extend proxy functionality.
 
-    Plugins are built as subclasses of this class, with packet listeners
-    defined using the :func:`listen` decorator.
+    Plugins are used to introspect and modify the contents of selected
+    frames passing through the connection.
 
-    They are passed the session of the calling client and a reference to
-    its frame data, allowing for introspection and manipulation.
+    Each plugin is built as a subclasses of this class, with packet
+    listeners defined using the :func:`listen` decorator.
 
     Listener dispatch is task-safe by default, plugin writers do not have
     to employ synchronization when trying to access class state.
@@ -105,12 +110,22 @@ class Plugin(metaclass=PluginMeta):
     def __init__(self):
         self._lock = trio.Lock()
 
-    async def _dispatch(self, dir: Direction, ctx: Context, frame: Frame):
-        for listener in self.__proxy_listeners__:  # type:ignore
-            filter = getattr(listener, "__proxy_filter__")
-            if dir == filter.direction and filter.can_dispatch(frame):
+    async def _dispatch(self, dir: Direction, ctx: Context, frame: Frame) -> bool:
+        should_not_skip = True
+
+        for listener in type(self).__proxy_listeners__:
+            f = getattr(listener, "__proxy_filter__")
+            if dir == f.direction and f.can_dispatch(frame):
                 async with self._lock:
-                    await listener(self, ctx, frame)
+                    res = await listener(self, ctx, frame)
+                    if res is None:
+                        res = True
+
+                    should_not_skip = should_not_skip and res
+
+                frame.dirty = frame.dirty or getattr(listener, "__proxy_dirty__")
+
+        return should_not_skip
 
 
 class PluginCollection:
@@ -127,6 +142,10 @@ class PluginCollection:
     def add(self, plugin: Plugin):
         self.plugins.append(plugin)
 
-    async def dispatch(self, dir: Direction, ctx: Context, frame: Frame):
+    async def dispatch(self, dir: Direction, ctx: Context, frame: Frame) -> bool:
+        should_not_skip = True
         for plugin in self.plugins:
-            await plugin._dispatch(dir, ctx, frame)
+            res = await plugin._dispatch(dir, ctx, frame)
+            should_not_skip = should_not_skip and res
+
+        return should_not_skip

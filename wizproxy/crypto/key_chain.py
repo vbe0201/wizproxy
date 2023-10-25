@@ -36,19 +36,25 @@ class KeyChain:
     """
 
     def __init__(self, ki_keys: dict[str, Any], injected_keys: dict[str, Any]):
-        self.key_buf = b64decode(ki_keys["raw"].encode())
+        self.ki_key_buf = b64decode(ki_keys["raw"].encode())
         self.public_keys = [
             RSA.import_key(b64decode(key["public"].encode()))
             for key in ki_keys["decoded"]
         ]
 
+        self.injected_key_buf = b64decode(injected_keys["raw"].encode())
         self.private_keys = [
             RSA.import_key(b64decode(key["private"].encode()))
             for key in injected_keys["decoded"]
         ]
 
     def hash_key_buf(self, offset: int, length: int) -> int:
-        return fnv_1a(self.key_buf[offset : offset + length])
+        return fnv_1a(self.ki_key_buf[offset : offset + length])
+
+    def verify_key_hash(self, offset: int, length: int, expected: int):
+        buf_hash = fnv_1a(self.injected_key_buf[offset : offset + length])
+        if buf_hash != expected:
+            raise ValueError("key hash mismatch; algorithm changed?")
 
     def sign(self, key_slot: int, data: bytes) -> bytes:
         key = self.private_keys[key_slot]

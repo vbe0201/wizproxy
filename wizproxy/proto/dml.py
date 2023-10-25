@@ -19,7 +19,7 @@ _DML_DECODE_LOOKUP = [
 
 
 class Type(IntEnum):
-    """Enumeration of supported DML types."""
+    """Supported DML types."""
 
     BYT = 0
     UBYT = 1
@@ -39,13 +39,15 @@ class Layout:
 
     layout: Iterable[tuple[str, Type]]
 
+    def __init__(self, *args: tuple[str, Type]):
+        self.layout = args
+
     def encode(self, msg: dict[str, Any]) -> bytes:
         buf = Bytes()
 
         for name, typ in self.layout:
             value = msg[name]
             _, encode = _DML_DECODE_LOOKUP[typ]
-
             encode(buf, value)
 
         return buf.getvalue()
@@ -56,7 +58,6 @@ class Layout:
 
         for name, typ in self.layout:
             decode, _ = _DML_DECODE_LOOKUP[typ]
-
             msg[name] = decode(buf)
 
         return msg

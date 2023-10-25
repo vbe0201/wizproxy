@@ -2,77 +2,90 @@ import io
 import struct
 from typing import Any
 
+U8 = struct.Struct("B")
+I8 = struct.Struct("b")
+U16 = struct.Struct("<H")
+I16 = struct.Struct("<h")
+U32 = struct.Struct("<I")
+I32 = struct.Struct("<i")
+U64 = struct.Struct("<Q")
+F32 = struct.Struct("<f")
+F64 = struct.Struct("<d")
+
 
 class Bytes(io.BytesIO):
     """
-    A :class:`io.BytesIO` with support for structured data.
+    Provides reading and writing support for structured binary data.
 
     All operations assume little-endian byte ordering.
     """
 
-    def _read_fmt(self, fmt: str) -> Any:
-        size = struct.calcsize(fmt)
-        unpacked = struct.unpack(fmt, self.read(size))
+    def load_frame(self, raw: bytes):
+        self.seek(0)
+        self.write(raw)
+        self.truncate()
 
-        return unpacked[0] if len(unpacked) == 1 else unpacked
+    def read_struct(self, s: struct.Struct) -> Any:
+        value = s.unpack(self.read(s.size))
+        return value[0] if len(value) == 1 else value
 
-    def _write_fmt(self, fmt: str, *args) -> int:
-        packed = struct.pack(fmt, *args)
+    def write_struct(self, s: struct.Struct, *args) -> int:
+        packed = s.pack(*args)
         return self.write(packed)
 
     def u8(self) -> int:
-        return self._read_fmt("B")
+        return self.read_struct(U8)
 
-    def write_u8(self, value: int) -> int:
-        return self._write_fmt("B", value)
+    def write_u8(self, v: int) -> int:
+        return self.write_struct(U8, v)
 
     def i8(self) -> int:
-        return self._read_fmt("b")
+        return self.read_struct(I8)
 
-    def write_i8(self, value: int) -> int:
-        return self._write_fmt("b", value)
+    def write_i8(self, v: int) -> int:
+        return self.write_struct(I8, v)
 
     def u16(self) -> int:
-        return self._read_fmt("<H")
+        return self.read_struct(U16)
 
-    def write_u16(self, value: int) -> int:
-        return self._write_fmt("<H", value)
+    def write_u16(self, v: int) -> int:
+        return self.write_struct(U16, v)
 
     def i16(self) -> int:
-        return self._read_fmt("<h")
+        return self.read_struct(I16)
 
-    def write_i16(self, value: int) -> int:
-        return self._write_fmt("<h", value)
+    def write_i16(self, v: int) -> int:
+        return self.write_struct(I16, v)
 
     def u32(self) -> int:
-        return self._read_fmt("<I")
+        return self.read_struct(U32)
 
-    def write_u32(self, value: int) -> int:
-        return self._write_fmt("<I", value)
+    def write_u32(self, v: int) -> int:
+        return self.write_struct(U32, v)
 
     def i32(self) -> int:
-        return self._read_fmt("<i")
+        return self.read_struct(I32)
 
-    def write_i32(self, value: int) -> int:
-        return self._write_fmt("<i", value)
+    def write_i32(self, v: int) -> int:
+        return self.write_struct(I32, v)
 
     def u64(self) -> int:
-        return self._read_fmt("<Q")
+        return self.read_struct(U64)
 
-    def write_u64(self, value: int) -> int:
-        return self._write_fmt("<Q", value)
+    def write_u64(self, v: int) -> int:
+        return self.write_struct(U64, v)
 
     def f32(self) -> float:
-        return self._read_fmt("<f")
+        return self.read_struct(F32)
 
-    def write_f32(self, value: float) -> int:
-        return self._write_fmt("<f", value)
+    def write_f32(self, v: float) -> int:
+        return self.write_struct(F32, v)
 
     def f64(self) -> float:
-        return self._read_fmt("<d")
+        return self.read_struct(F64)
 
-    def write_f64(self, value: float) -> int:
-        return self._write_fmt("<d", value)
+    def write_f64(self, v: float) -> int:
+        return self.write_struct(F64, v)
 
     def string(self) -> bytes:
         size = self.u16()
@@ -88,13 +101,13 @@ class Bytes(io.BytesIO):
 
     def wstr(self) -> str:
         size = self.u16()
-        return self.read(size).decode("utf-16-le")
+        return self.read(size * 2).decode("utf-16-le")
 
     def write_wstr(self, data: str) -> int:
         raw = data.encode("utf-16-le")
         written = 0
 
-        written += self.write_u16(len(raw))
+        written += self.write_u16(len(data))
         written += self.write(raw)
 
         return written

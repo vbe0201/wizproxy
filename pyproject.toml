@@ -8,6 +8,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+click = "^8.1.7"
 loguru = "^0.7.0"
 pycryptodome = "^3.18.0"
 scapy = "^2.5.0"
