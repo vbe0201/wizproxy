@@ -7,10 +7,10 @@ from wizproxy.session import Session
 
 from .packet_buffer import PacketBuffer
 
-# Timeout is chosen so that it represents the serverbound Keep
-# Alive Rsp interval. If one party is too slow to send anything
-# at all in that time, the connection is zombied.
-TIMEOUT = 60.0
+# Timeout is chosen so that it represents double the serverbound
+# Keep Alive Rsp interval. If one party is too slow to send
+# anything at all in that time, the connection is zombied.
+TIMEOUT = 120.0
 
 
 class FrameStream:
