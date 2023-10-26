@@ -50,7 +50,7 @@ MSG_CONNECTIONSTATS = dml.Layout(
 )
 
 
-class Builtin(Plugin):
+class BuiltinPlugin(Plugin):
     """
     Core functionality of the proxy, modeled as a built-in plugin.
 

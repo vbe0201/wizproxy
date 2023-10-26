@@ -10,7 +10,7 @@ from loguru import logger
 
 from .core import Proxy
 from .crypto import KeyChain
-from .plugin.log import VerboseLog
+from .plugin.log import VerboseLogPlugin
 from .plugin.scapy import ScapyPlugin
 from .proto import SocketAddress
 from .session import ClientSig
@@ -58,7 +58,7 @@ async def main(
 
         # If requested, enable verbose packet logging.
         if verbose:
-            proxy.add_plugin(VerboseLog())
+            proxy.add_plugin(VerboseLogPlugin())
 
         # Spawn the initial shard to proxy the login server.
         await proxy.spawn_shard(login)

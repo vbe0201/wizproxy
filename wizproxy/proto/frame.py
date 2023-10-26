@@ -21,7 +21,7 @@ class Frame:
     order: Optional[int]
     payload: bytes
 
-    # Controls whether a frame needs to be  after a change.
+    # Controls whether a frame needs to be reserialized after a change.
     dirty: bool = field(default=False)
 
     @classmethod

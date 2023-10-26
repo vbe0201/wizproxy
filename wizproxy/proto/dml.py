@@ -4,7 +4,7 @@ from typing import Any, Iterable
 
 from .bytes import Bytes
 
-_DML_DECODE_LOOKUP = [
+_DML_DECODE_LOOKUP = (
     (Bytes.i8, Bytes.write_i8),
     (Bytes.u8, Bytes.write_u8),
     (Bytes.u16, Bytes.write_u16),
@@ -15,7 +15,7 @@ _DML_DECODE_LOOKUP = [
     (Bytes.wstr, Bytes.write_wstr),
     (Bytes.f32, Bytes.write_f32),
     (Bytes.f64, Bytes.write_f64),
-]
+)
 
 
 class Type(IntEnum):

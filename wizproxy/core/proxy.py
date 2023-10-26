@@ -4,7 +4,7 @@ import trio
 
 from wizproxy.crypto import KeyChain
 from wizproxy.plugin import Plugin, PluginCollection
-from wizproxy.plugin.builtin import Builtin
+from wizproxy.plugin.builtin import BuiltinPlugin
 from wizproxy.proto import SocketAddress
 from wizproxy.session import ClientSig
 
@@ -42,7 +42,7 @@ class Proxy:
         self.nursery = nursery
 
         self.plugins = PluginCollection()
-        self.plugins.add(Builtin())
+        self.plugins.add(BuiltinPlugin())
 
         self._shards = {}
 
@@ -57,7 +57,7 @@ class Proxy:
             return shard
 
         shard = Shard(self.plugins, self.key_chain, self.client_sig, self._tx.clone())
-        self._shards[addr] = await shard.run(self.host, self.nursery, addr)
+        self._shards[addr] = await shard.start(self.host, self.nursery, addr)
 
         return shard.self_addr
 

@@ -27,7 +27,7 @@ class AesContext:
     """
 
     def __init__(self, key: bytes, nonce: bytes, chunk_size: int):
-        self._key = key
+        self.key = key
         self.chunk_size = chunk_size
 
         self.encryptor = AES.new(key, AES.MODE_GCM, nonce=nonce)
@@ -98,7 +98,7 @@ class AesContext:
             if self.encrypted == 0:
                 output_view[:TAG_SIZE] = self.encryptor.digest()
                 self.encryptor = AES.new(
-                    self._key,
+                    self.key,
                     AES.MODE_GCM,
                     nonce=get_random_bytes(NONCE_SIZE),
                 )
@@ -137,7 +137,7 @@ class AesContext:
             if self.decrypted == 0:
                 self.decryptor.verify(data[:TAG_SIZE])
                 self.decryptor = AES.new(
-                    self._key,
+                    self.key,
                     AES.MODE_GCM,
                     nonce=data[TAG_SIZE : TAG_SIZE + NONCE_SIZE],
                 )

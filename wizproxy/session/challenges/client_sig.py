@@ -10,7 +10,7 @@ CONTROL_INCLUDE_OFFSETS = 1 << 9
 CONTROL_INCLUDE_MODULES = 1 << 12
 CONTROL_OBFUSCATE = 1 << 17
 
-CHALLENGE_STRUCT = Struct("<III")
+CHALLENGE_BUF = Struct("<III")
 
 
 class ClientSig:
@@ -122,7 +122,7 @@ def challenge(sig: ClientSig, message: memoryview) -> int:
         raise ValueError("received too few bytes to perform challenge")
 
     # Parse challenge inputs.
-    control_mask, spec, key = CHALLENGE_STRUCT.unpack_from(message)
+    control_mask, spec, key = CHALLENGE_BUF.unpack_from(message)
 
     # Skip the challenge if it is disabled.
     if (control_mask & CONTROL_DISABLE) != 0:

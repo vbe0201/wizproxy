@@ -111,7 +111,7 @@ class Shard:
     ):
         await self.tunnel(Direction.SERVER_TO_CLIENT, ctx, stream, peer)
 
-    async def run(
+    async def start(
         self,
         host: Optional[str],
         nursery: trio.Nursery,

@@ -5,7 +5,7 @@ from wizproxy.proto import Frame
 from . import Direction, Plugin, listen
 
 
-class VerboseLog(Plugin):
+class VerboseLogPlugin(Plugin):
     """Logs packets with their direction to stdout."""
 
     @listen(Direction.CLIENT_TO_SERVER, dirty=False)

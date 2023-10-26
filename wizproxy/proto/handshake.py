@@ -4,7 +4,8 @@ from typing import Self
 
 from .bytes import Bytes
 
-_HASH = Struct("<HH")
+KEY_HASH = Struct("<HH")
+ENCRYPTED_MESSAGE = Struct("<BIIII16s16s")
 
 
 @dataclass
@@ -19,6 +20,8 @@ class SignedMessage:
 
     @classmethod
     def read(cls, buf: Bytes) -> Self:
+        buf.seek(0)
+
         flags = buf.u8()
         key_slot = buf.u8()
         key_mask = buf.u8()
@@ -29,6 +32,7 @@ class SignedMessage:
         return cls(flags, key_slot, key_mask, challenge, echo)
 
     def write(self, buf: Bytes) -> int:
+        buf.seek(0)
         written = 0
 
         written += buf.write_u8(self.flags)
@@ -38,11 +42,12 @@ class SignedMessage:
         written += buf.write(self.challenge)
         written += buf.write_u32(self.echo)
 
+        buf.truncate()
         return written
 
     @property
     def hash_region(self) -> tuple[int, int]:
-        return _HASH.unpack_from(self.challenge)
+        return KEY_HASH.unpack_from(self.challenge)
 
     @property
     def challenge_type(self) -> int:
@@ -57,8 +62,6 @@ class SignedMessage:
 class EncryptedMessage:
     """The cryptographic message portion of Session Accept."""
 
-    _STRUCT = Struct("<BIIII16s16s")
-
     flags: int
     key_hash: int
     challenge_answer: int
@@ -69,12 +72,16 @@ class EncryptedMessage:
 
     @classmethod
     def read(cls, buf: Bytes) -> Self:
-        args = buf.read_struct(EncryptedMessage._STRUCT)
+        buf.seek(0)
+
+        args = buf.read_struct(ENCRYPTED_MESSAGE)
         return cls(*args)
 
     def write(self, buf: Bytes) -> int:
-        return buf.write_struct(
-            EncryptedMessage._STRUCT,
+        buf.seek(0)
+
+        written = buf.write_struct(
+            ENCRYPTED_MESSAGE,
             self.flags,
             self.key_hash,
             self.challenge_answer,
@@ -83,3 +90,6 @@ class EncryptedMessage:
             self.key,
             self.nonce,
         )
+
+        buf.truncate()
+        return written

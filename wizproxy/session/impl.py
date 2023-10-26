@@ -37,6 +37,7 @@ class Session:
     :param server: The socket address of the connected server.
     :param sid: The Session ID of the client. Never changes.
     :param key_chain: The key chain for asymmetric crypto.
+    :param client_sig: A decrypted ClientSig, if any.
     """
 
     def __init__(
@@ -131,12 +132,8 @@ class Session:
         self.client_aes = AesContext.client(message.key, message.nonce)
         self.server_aes = AesContext.server(message.key, message.nonce)
 
-        # Serialize the message data.
-        buf.seek(0)
-        message.write(buf)
-        buf.truncate()
-
         # Re-encrypt the payload with KI's public key.
+        message.write(buf)
         crypto_payload = self.key_chain.encrypt(self.key_slot, buf.getvalue())
         buf.close()
 
