@@ -49,13 +49,13 @@ class PacketBuffer:
 
         return data
 
-    def _required_bytes(self, aes: AesContext | None, nbytes: int) -> int:
+    def _required_bytes(self, aes: Optional[AesContext], nbytes: int) -> int:
         if aes is not None:
             return aes.calculate_decryption_overhead(nbytes)
         else:
             return nbytes
 
-    def _poll_header(self, aes: AesContext | None):
+    def _poll_header(self, aes: Optional[AesContext]):
         if self._state == State.EMPTY:
             # Make sure we have enough bytes to consume the frame header.
             food_bytes = self._required_bytes(aes, 8)
@@ -72,7 +72,7 @@ class PacketBuffer:
             else:
                 self._state = State.GOT_FOOD
 
-    def poll_frame(self, aes: AesContext | None) -> Optional[tuple[bool, bytes]]:
+    def poll_frame(self, aes: Optional[AesContext]) -> Optional[tuple[bool, bytes]]:
         # Read and decrypt the next frame's header, or wait for more data.
         self._poll_header(aes)
         if self._state == State.EMPTY:

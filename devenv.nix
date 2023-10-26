@@ -5,7 +5,7 @@
 
   languages.python = {
     enable = true;
-    package = pkgs.python311;
+    package = pkgs.pypy3;
     poetry.enable = true;
   };
 }

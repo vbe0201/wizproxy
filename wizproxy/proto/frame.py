@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Self
+from typing import Optional
 
 from .bytes import Bytes
 
@@ -25,7 +25,7 @@ class Frame:
     dirty: bool = field(default=False)
 
     @classmethod
-    def read(cls, buf: Bytes) -> Self:
+    def read(cls, buf: Bytes) -> "Frame":
         buf.seek(0)
         original = buf.getvalue()
 

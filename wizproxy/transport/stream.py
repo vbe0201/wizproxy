@@ -1,4 +1,4 @@
-from typing import Optional, Self
+from typing import Optional
 
 import trio
 
@@ -27,7 +27,7 @@ class FrameStream:
     """
 
     def __init__(self, stream: trio.SocketStream, session: Session, client: bool):
-        self._stream = aiter(stream)
+        self._stream = stream.__aiter__()
 
         self.session = session
         self.client = client
@@ -41,7 +41,7 @@ class FrameStream:
         else:
             return self.session.server_aes
 
-    def __aiter__(self) -> Self:
+    def __aiter__(self) -> "FrameStream":
         return self
 
     async def __anext__(self) -> tuple[bool, bytes]:
@@ -52,5 +52,5 @@ class FrameStream:
 
             # Otherwise, wait for more stream data and try again.
             with trio.fail_after(TIMEOUT):
-                data = await anext(self._stream)
+                data = await self._stream.__anext__()
                 self.buffer.feed(data)

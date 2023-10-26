@@ -3,6 +3,7 @@ from functools import partial
 from typing import Optional
 
 import trio
+from exceptiongroup import ExceptionGroup, catch
 from loguru import logger
 
 from wizproxy.crypto import KeyChain
@@ -128,24 +129,28 @@ class Shard:
 
             logger.info(f"[{self}] Client {sid} ({client}) connected")
 
-            try:
-                async with trio.open_nursery() as nursery:
-                    nursery.start_soon(self._client_task, context, stream, outward)
-                    nursery.start_soon(self._server_task, context, outward, stream)
-
-            except* trio.BrokenResourceError:
+            def broken_resource_handler(eg: ExceptionGroup):
                 # We were pranked by a client disconnecting unexpectedly.
                 # In that case, we shall just ignore it without bringing
                 # the whole shard down.
                 pass
 
-            except* trio.TooSlowError:
+            def too_slow_handler(eg: ExceptionGroup):
                 logger.info(f"[{self}] Client {sid} disconnected due to inactivity")
 
-            except* ValueError as eg:
+            def value_error_handler(eg: ExceptionGroup):
                 # We received invalid data and can't continue processing.
                 for e in eg.exceptions:
                     logger.error(f"[{self}] Client {sid} crashed: {e}")
+
+            with catch({
+                trio.BrokenResourceError: broken_resource_handler,
+                trio.TooSlowError: too_slow_handler,
+                ValueError: value_error_handler,
+            }):
+                async with trio.open_nursery() as nursery:
+                    nursery.start_soon(self._client_task, context, stream, outward)
+                    nursery.start_soon(self._server_task, context, outward, stream)
 
         # Port 0 makes the OS pick for us. So we need to remember the
         # assigned address after the server has started.

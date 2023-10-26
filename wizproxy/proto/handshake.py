@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from struct import Struct
-from typing import Self
 
 from .bytes import Bytes
 
@@ -19,7 +18,7 @@ class SignedMessage:
     echo: int
 
     @classmethod
-    def read(cls, buf: Bytes) -> Self:
+    def read(cls, buf: Bytes) -> "SignedMessage":
         buf.seek(0)
 
         flags = buf.u8()
@@ -71,7 +70,7 @@ class EncryptedMessage:
     nonce: bytes
 
     @classmethod
-    def read(cls, buf: Bytes) -> Self:
+    def read(cls, buf: Bytes) -> "EncryptedMessage":
         buf.seek(0)
 
         args = buf.read_struct(ENCRYPTED_MESSAGE)

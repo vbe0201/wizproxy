@@ -1,5 +1,3 @@
-from typing import Self
-
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 
@@ -37,11 +35,11 @@ class AesContext:
         self.decrypted = 0
 
     @classmethod
-    def client(cls, key: bytes, nonce: bytes) -> Self:
+    def client(cls, key: bytes, nonce: bytes) -> "AesContext":
         return cls(key, nonce, CLIENT_CHUNK)
 
     @classmethod
-    def server(cls, key: bytes, nonce: bytes) -> Self:
+    def server(cls, key: bytes, nonce: bytes) -> "AesContext":
         return cls(key, nonce, SERVER_CHUNK)
 
     def _calculate_overhead(self, progress: int, step: int, nbytes: int) -> int:
